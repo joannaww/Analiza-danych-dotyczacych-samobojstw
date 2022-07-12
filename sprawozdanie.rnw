@@ -1,0 +1,295 @@
+\documentclass[12pt]{mwrep}
+\usepackage[utf8]{inputenc}
+\usepackage{polski}
+\usepackage{lmodern}
+\usepackage{wasysym}
+\usepackage[hidelinks]{hyperref}
+\usepackage{array}
+\newcolumntype{P}[1]{>{\centering\arraybackslash}p{#1}}
+\newcolumntype{M}[1]{>{\centering\arraybackslash}m{#1}}
+\author{Joanna Matuszak 255762, Joanna Wojciechowicz 255747}
+\title{Sprawozdanie 1}
+\date{\today}
+<<include=F>>=
+pdf.options(encoding='CP1250')
+library(xtable)
+@
+
+\begin{document}
+\SweaveOpts{concordance=TRUE}
+\maketitle
+\tableofcontents
+\chapter{Wstęp}
+
+Analizowane dane dotyczą ilości samobójstw w zależności od roku, płci i wieku w wybranych państwach świata. Zbiór danych pochodzi ze strony \href{https://www.kaggle.com/}{Kaggle} \url{https://www.kaggle.com/szamil/who-suicide-statistics} i został zebrany przez Światową Organizację Zdrowia WHO. 
+
+Celem analizy będzie odpowiedź na pytanie „Kto częściej popełnia samobójstwa – kobiety czy mężczyźni?". Przeprowadzimy analizę w zależności od kraju i grupy wiekowej. Na początku skupimy się na analizie całościowej - weźmiemy pod uwagę cały zbiór danych, a następnie na reprezentatywnej grupie państw Europy Zachodniej.
+
+Aby to zrobić dokonamy wstępnej obróbki danych, w której przeanalizujemy braki danych oraz błędne wartości w zbiorze. Następnie, wykorzystując różnego rodzaju wykresy, takie jak wykres słupkowy oraz wykres liniowy, wyciągniemy wnioski, które pozwolą odpowiedzieć na postawione pytanie badawcze.
+
+
+\chapter{Wstępna obróbka danych}
+
+<<include=FALSE>>=
+library(dplyr)
+library(ggplot2)
+df <- read.csv("who_suicide_statistics.csv", stringsAsFactors = TRUE)
+@
+
+Zbiór danych, którego kilka początkowych wierszy zostało przedstawionych w Tabeli \ref{tab:tabelka1}, zawiera zarówno zmienne kategoryczne jak i numeryczne.
+
+<< echo=F,results='asis'>>=
+library(xtable)
+xtable(df[29881:29891, ], caption = "Prezentacja danych", label = "tab:tabelka1")
+@
+
+Mamy $43776$ obserwacji sześciu zmiennych. Każdy wiersz zawiera informacje o liczbie samobójstw i rozmiarze populacji w danym kraju dla danego roku, płci i kategorii wiekowej.
+
+Wśród zmiennych kategorycznych mamy:
+\begin{itemize}
+  \item country - zmienna opisująca, z którego kraju spośród 141 zbadanych pochodzą dane,
+  \item sex - płeć:
+    \begin{itemize}
+      \item female - kobiety,
+      \item male - mężczyźni,
+    \end{itemize}
+  \item age - grupa wiekowa:
+    \begin{itemize}
+      \item 5-14 years,
+      \item 15-24 years,
+      \item 25-34 years,
+      \item 35-54 years,
+      \item 55-74 years,
+      \item 75+ years.
+    \end{itemize}
+\end{itemize}
+
+Natomiast wśród zmiennych numerycznych wyróżniamy:
+\begin{itemize}
+  \item year - rok, z którego pochodzą dane (lata od $\Sexpr{min(df$year)}$ do $\Sexpr{max(df$year)}$),
+  \item suicides\_no - liczba samobójstw (od $\Sexpr{min(df$suicides_no, na.rm=TRUE)}$ do $\Sexpr{max(df$suicides_no, na.rm=TRUE)}$),
+  \item population - liczba osobników w populacji (od $\Sexpr{min(df$population, na.rm=TRUE)}$ do $\Sexpr{max(df$population, na.rm=TRUE)}$).
+\end{itemize}
+
+<<include=FALSE>>=
+df$age <- factor(df$age, levels = c("5-14 years", "15-24 years", "25-34 years", "35-54 years", "55-74 years", "75+ years"))
+@
+
+
+\section{Braki danych}
+
+W naszym zbiorze danych występuje $\Sexpr{sum(is.na(df$suicides_no))}$ braków danych dotyczących zmiennej suicides\_no oraz $\Sexpr{sum(is.na(df$population))}$ dotyczących zmiennej population. Oprócz tego, nie wszystkie kraje posiadają pełne dane od 1979 do 2016 roku. 
+
+<<include=FALSE>>=
+sum(is.na(df$country))
+sum(is.na(df$year))
+sum(is.na(df$sex))
+sum(is.na(df$age))
+@
+
+W dalszej analizie pomijamy rekordy, w których pojawia się brak danych. Decyzja ta jest uwarunkowana     specyfiką danych. Na liczbę samobójstw w~danym roku wpływ mogło mieć wiele czynników, dlatego ryzkownym byłoby zastępowanie braków inną wartością, na przykład średnią. W naszej opinii pominięcie wierszy z brakami danych to w tym przypadku sensowne rozwiązanie.
+
+
+\section{Błędne dane}
+
+Możemy zauważyć, że nasz zbiór danych zawiera podejrzane obserwacje, dla których przy dość dużej populacji danego kraju zmienna suicides\_no tylko w niektórych latach przyjmuje wartość 0. Możliwe, że wartości te zostały błędnie wpisane i~powinny być oznaczone jako NA. Niestety nie jesteśmy w stanie jednoznacznie stwerdzić, które z nich powinniśmy traktować jako brak danych, a~które jako informatywne dane. Wobec tego nie wprowadzamy żadnych zmian i~zakładamy, że obecne w danych zera zostały wpisany intencjonalnie.
+
+\chapter{Analiza danych}
+
+\section{Analiza całego zbioru danych}
+
+Analizę rozpoczniemy od wizualizacji proporcji dotyczących płci z wykorzystaniem wszystkich danych. Z wykresu \ref{fig:bar1} na stronie \pageref{fig:bar1} możemy odczytać, że problem samobójstw na przestrzeni prawie czterech dekad dotyczył głównie mężczyzn.
+
+<<bar1, echo=FALSE, out.width='4in', fig.align="center",fig.cap="Liczba samobójstw w zależności od płci">>=
+ggplot(df, aes(x = sex, weight=suicides_no)) +
+    geom_bar(fill="steelblue") + 
+    theme(plot.title = element_text(hjust = 0.5), 
+          axis.text.x = element_text(angle = 90)) + 
+    ggtitle("Liczba samobójstw w zależności od płci")
+@
+
+<<include=FALSE>>=
+Europe <- c("Albania", "Andorra", "Austria", "Belarus", "Belgium", "Bosnia and Herzegovina", "Bulgaria", "Croatia", "Czech Republic", "Denmark", "Estonia", "Finland", "France", "Germany", "Greece", "Holy See", "Hungary", "Iceland", "Ireland", "Italy",	"Latvia", "Liechtenstein", "Lithuania", "Luxembourg", "Malta", "Moldova", "Republic of Moldova", "Monaco", "Montenegro", "Netherlands", "North Macedonia", "TFYR Macedonia", "Norway", "Poland", "Portugal", "Romania", "San Marino", "Serbia", "Slovakia", "Slovenia", "Spain", "Sweden", "Switzerland", "Ukraine", "United Kingdom")
+
+sum(df$suicides_no[df$country %in% Europe & df$sex == "male"], na.rm=TRUE)/sum(df$suicides_no[df$country %in% Europe], na.rm=TRUE)
+
+sum(df$suicides_no[df$country %in% Europe & df$sex == "female"], na.rm=TRUE)/sum(df$suicides_no[df$country %in% Europe], na.rm=TRUE)
+
+Africa <- c("Algeria", "Angola", "Benin", "Botswana", "Burkina Faso", "Burundi", "Cameroon", "Cape Verde", "Cabo Verde", "Central African Republic", "Chad", "Camoros", "Democratic Republic of the Congo", "Republic of the Congo", "Djibouti", "Egypt", "Equatorial Guinea", "Eritrea", "Ethiopia", "Gabon", "Gambia", "Ghana", "Guinea", "Guinea-Bissau", "Ivory Coast", "Kenya", "Lesotho", "Liberia", "Libya", "Madagascar", "Malawi", "Mali", "Mauritania", "Mauritius", "Morocco", "Mozambique", "Namibia", "Niger", "Nigeria", "Rwanda", "Sao Tome and Principe", "Senegal", "Seychelles", "Sierra Leone", "Somalia", "South Africa", "South Sudan", "Sudan", "Swaziland", "Tanzania", "Togo", "Tunisia", "Uganda", "Zambia", "Zimbabwe", "Mayotte", "Reunion", "Rodrigues")
+
+sum(df$suicides_no[df$country %in% Africa & df$sex == "male"], na.rm=TRUE)/sum(df$suicides_no[df$country %in% Africa], na.rm=TRUE)
+
+sum(df$suicides_no[df$country %in% Africa & df$sex == "female"], na.rm=TRUE)/sum(df$suicides_no[df$country %in% Africa], na.rm=TRUE)
+
+Asia <- c("Afghanistan", "Armenia", "Azerbaijan", "Bahrain", "Bangladesh", "Bhutan", "Brunei", "Brunei Darussalam", "Cambodia", "China", "Cyprus", "Georgia", "India", "Indonesia", "Iran", "Iran (Islamic Rep of)", "Iraq", "Israel", "Japan", "Jordan", "Kazakhstan", "Kuwait", "Kyrgyzstan", "Laos", "Lebanon", "Malaysia", "Maldives", "Mongolia", "Myanmar", "Nepal", "North Korea", "Oman", "Pakistan", "Palestine", "Occupied Palestinian Territory", "Philippines", "Qatar", "Russia", "Russian Federation", "Saudi Arabia", "Singapore", "South Korea", "Sri Lanka", "Syria", "Syrian Arab Republic", "Taiwan", "Tajikistan", "Thailand", "Timor-Leste", "Turkey", "Turkmenistan", "United Arab Emirates", "Uzbekistan", "Vietnam", "Yemen", "Hong Kong SAR", "Macau", "Republic of Korea")
+
+sum(df$suicides_no[df$country %in% Asia & df$sex == "male"], na.rm=TRUE)/sum(df$suicides_no[df$country %in% Asia], na.rm=TRUE)
+
+sum(df$suicides_no[df$country %in% Asia & df$sex == "female"], na.rm=TRUE)/sum(df$suicides_no[df$country %in% Asia], na.rm=TRUE)
+
+Australia <-c("Australia", "Fiji", "Kiribati", "Marshall Islands", "Micronesia", "Nauru", "New Zealand", "Palau", "Papua New Guinea", "Samoa", "Solomon Islands", "Tonga", "Tuvalu", "Vanuatu")
+
+sum(df$suicides_no[df$country %in% Australia & df$sex == "male"], na.rm=TRUE)/sum(df$suicides_no[df$country %in% Australia], na.rm=TRUE)
+
+sum(df$suicides_no[df$country %in% Australia & df$sex == "female"], na.rm=TRUE)/sum(df$suicides_no[df$country %in% Australia], na.rm=TRUE)
+
+South_America <- c("Argentina", "Aruba", "Bolivia", "Brazil", "Chile", "Colombia", "Ecuador", "Guyana", "Paraguay", "Peru", "Suriname", "Uruguay", "Venezuela", "Venezuela (Bolivarian Republic of)", "Falkland Islands (Malvinas)", "French Guiana", "Netherlands Antilles")
+
+sum(df$suicides_no[df$country %in% South_America & df$sex == "male"], na.rm=TRUE)/sum(df$suicides_no[df$country %in% South_America], na.rm=TRUE)
+
+sum(df$suicides_no[df$country %in% South_America & df$sex == "female"], na.rm=TRUE)/sum(df$suicides_no[df$country %in% South_America], na.rm=TRUE)
+
+North_America <- c("Antigua and Barbuda", "Anguilla", "Bahamas", "Barbados", "Belize", "Bermuda", "British Virgin Islands", "Canada", "Cayman Islands", "Costa Rica", "Cuba", "Dominica", "Dominican Republic", "El Salvador", "Grenada", "Guatemala", "Guadeloupe", "Haiti", "Honduras", "Jamaica", "Mexico", "Nicaragua", "Panama", "Saint Kitts and Nevis", "Saint Lucia", "Saint Vincent and the Grenadines", "Trinidad and Tobago", "United States of America", "Martinique", "Montserrat", "Puerto Rico", "Saint Pierre and Miquelon", "Saint Vincent and Grenadines", "Turks and Caicos Islands", "Virgin Islands (USA)")
+
+sum(df$suicides_no[df$country %in% North_America & df$sex == "male"], na.rm=TRUE)/sum(df$suicides_no[df$country %in% North_America], na.rm=TRUE)
+
+sum(df$suicides_no[df$country %in% North_America & df$sex == "female"], na.rm=TRUE)/sum(df$suicides_no[df$country %in% North_America], na.rm=TRUE)
+@
+
+\begin{table}[ht]
+\centering
+\begin{tabular}{M{0.7 cm}|M{1.7 cm}|M{1.7 cm}|M{1.7 cm}|M{1.7 cm}|M{1.7 cm}|M{1.7 cm}}
+płeć & Europa & Azja & Afryka & Ameryka Płn. & Ameryka Płd. & Australia i~Oceania \\ \hline
+$\female$ & $\Sexpr{round(sum(df$suicides_no[df$country %in% Europe & df$sex == "female"], na.rm=TRUE)/sum(df$suicides_no[df$country %in% Europe], na.rm=TRUE), 2)}$ & $\Sexpr{round(sum(df$suicides_no[df$country %in% Asia & df$sex == "female"], na.rm=TRUE)/sum(df$suicides_no[df$country %in% Asia], na.rm=TRUE), 2)}$   &  $\Sexpr{round(sum(df$suicides_no[df$country %in% Africa & df$sex == "female"], na.rm=TRUE)/sum(df$suicides_no[df$country %in% Africa], na.rm=TRUE), 2)}$ & $\Sexpr{round(sum(df$suicides_no[df$country %in% North_America & df$sex == "female"], na.rm=TRUE)/sum(df$suicides_no[df$country %in% North_America], na.rm=TRUE), 2)}$ & $\Sexpr{round(sum(df$suicides_no[df$country %in% South_America & df$sex == "female"], na.rm=TRUE)/sum(df$suicides_no[df$country %in% South_America], na.rm=TRUE), 2)}$ &  $\Sexpr{round(sum(df$suicides_no[df$country %in% Australia & df$sex == "female"], na.rm=TRUE)/sum(df$suicides_no[df$country %in% Australia], na.rm=TRUE), 2)}$ \\ \hline
+$\male$ & $\Sexpr{round(sum(df$suicides_no[df$country %in% Europe & df$sex == "male"], na.rm=TRUE)/sum(df$suicides_no[df$country %in% Europe], na.rm=TRUE), 2)}$ & $\Sexpr{round(sum(df$suicides_no[df$country %in% Asia & df$sex == "male"], na.rm=TRUE)/sum(df$suicides_no[df$country %in% Asia], na.rm=TRUE), 2)}$  & $\Sexpr{round(sum(df$suicides_no[df$country %in% Africa & df$sex == "male"], na.rm=TRUE)/sum(df$suicides_no[df$country %in% Africa], na.rm=TRUE), 2)}$   & $\Sexpr{round(sum(df$suicides_no[df$country %in% North_America & df$sex == "male"], na.rm=TRUE)/sum(df$suicides_no[df$country %in% North_America], na.rm=TRUE), 2)}$ & $\Sexpr{round(sum(df$suicides_no[df$country %in% South_America & df$sex == "male"], na.rm=TRUE)/sum(df$suicides_no[df$country %in% South_America], na.rm=TRUE), 2)}$ &  $\Sexpr{round(sum(df$suicides_no[df$country %in% Australia & df$sex == "male"], na.rm=TRUE)/sum(df$suicides_no[df$country %in% Australia], na.rm=TRUE), 2)}$ \\
+\end{tabular}
+\caption{Procentowy udział kobiet i mężczyzn w łącznej liczbie popełnionych samobójstw w zależności od kontynentu}
+\label{tab:tabelka}
+\end{table}
+
+Gdy rozpatrzymy problem w zależności od kontynentu dla badanych państw (tabela \ref{tab:tabelka}) okazuje się, że tendencja ta jest zachowana. 
+
+<<bar2, echo=FALSE, out.width='4in', fig.align="center", fig.cap="Liczba samobójstw w zależności od płci i przedziału wiekowego">>=
+ggplot(df, aes(x = age, fill = sex, weight=suicides_no)) +
+  geom_bar(position = "dodge") + # "dodge" - side-by-side (not stacked) bar chart, "stack" - stacked bar chart
+  theme(axis.text.x = element_text(angle = 90)) + # rotating the axis labels
+  ggtitle("Liczba samobójstw w zależności od płci i przedziału wiekowego")
+@
+
+Analizując wykres \ref{fig:bar2} na stronie \pageref{fig:bar2} możemy zauważyć, że w grupie wiekowej $35-54$ lata ilość samobójstw była największa. Musimy jednak pamiętać, że podział na przedziały wiekowe nie jest równomierny - występują przedziały o różnych długościach. Niemniej jednak, w każdej z rozważanych grup przeważają mężczyźni. 
+
+<<scatter, echo=FALSE, out.width='4in', fig.align="center", warning=FALSE, fig.cap="Stosunek liczby samobójstw do światowej populacji w danym roku">>=
+df_no_NA <- df %>% filter(is.na(suicides_no)==F & is.na(population)==F)
+suicides_ratio <- df %>% filter(is.na(suicides_no)==F & is.na(population)==F) %>% group_by(year) %>% mutate(sum(suicides_no)/sum(population))
+df_no_NA$suicides_ratio <- suicides_ratio$`sum(suicides_no)/sum(population)`
+
+# wybieramy jedno państwo, które ma dane dla wszystkich lat, biezrzemy co 12 wiersz, który zawiera informacje o łącznej stosunku liczbie samobójstw całego świata do łącznej populacji całego świata w danym roku
+ggplot(df_no_NA[df_no_NA$country=="Hungary",][seq(1, 456, by = 12),], aes(x=year, y=suicides_ratio)) + geom_point() + geom_line() +
+  ggtitle("Stosunek liczby samobójstw do światowej populacji w danym roku") +
+  ylim(0,0.0002)
+@
+
+Gdy przeanalizujemy, jak zmienia się stosunek liczby samobójstw do całej populacji na przestrzeni lat (wykres \ref{fig:scatter} na stronie \pageref{fig:scatter}) okazuje się, że od mniej więcej roku 1995 pojawia się minimalna tendencja spadkowa. Możemy jednak uznać, że proporcja ta jest w miarę jednostajna.
+
+\section{Analiza dla wybranych państw}
+
+W dalszej analizie skupimy się na państwach Europy Zachodniej, spośród których wybierzemy te najbardziej reprezentatywne - nieposiadające braków danych w latach od 1979 do 2014 (pomijamy lata 2015 i 2016 z racji tego, że dane dla tych lat są niekompletne). Będą to Belgia, Francja, Irlandia, Włochy, Luksemburg, Malta oraz Holandia. Dzięki temu będziemy pracować na ciągłych danych i otrzymamy bardziej miarodajne wyniki.
+
+<<include=FALSE>>=
+# sprawdzamy, które kraje europejskie nie mają braków danych postaci NA
+ok <- c()
+for(country in levels(df$country)){
+  if(sum(is.na(df$suicides_no[df$country==country])) == 0 & country %in% Europe) {
+    ok <- c(ok, c(country))
+  }
+}
+
+df_ok <- df[df$country %in% ok,]
+ok
+@
+
+<<include=FALSE>>=
+chosen_countries <- c("Belgium", "France", "Ireland", "Italy", "Luxembourg", "Malta", "Netherlands")
+
+df_chosen <- df[df$country %in% chosen_countries,]
+@
+
+Rozpoczniemy od zwizualizowania różnic między łączną liczbą samobójstw w wybranych państwach w latach 1979-2014. 
+
+Z wykresu \ref{fig:bar3b} na stronie \pageref{fig:bar3b} możemy odczytać, że w latach 1979-2014 najwięcej samobójstw zostało popełnionych we Francji. Problem jest także znaczący we Włoszech oraz Belgii i Holandii. W pozostałych analizowanych krajach liczba samobójstw była znacząco mniejsza. 
+
+Aby uwzględnić różnice w populacjach danych państw, przedstawimy liczbę samobójstw jako procent społeczeństwa danego kraju w roku 2014. Patrząc na unormowany wykres \ref{fig:bar4} na stronie \pageref{fig:bar4} okazuje się, że różnice te~nie są aż tak drastyczne. Możemy wyciągnąć zupełnie inne wnioski - biorąc pod~uwagę liczbę mieszkańców danego kraju, najlepiej wypadają Włochy i~Malta, a najgorzej Belgia, Francja i Luksemburg.
+
+<<include=FALSE>>=
+total_population <- df %>% group_by(country, year) %>% mutate(sum(population)) 
+df$total_population <- total_population$`sum(population)`
+
+@
+
+<<bar3b, echo=FALSE, out.width='4in', fig.align="center", fig.align="center", warning=FALSE, fig.cap="Liczba samobójstw w latach 1979-2014">>=
+ggplot(df[df$country %in% chosen_countries & df$year %in% 1979:2014,], 
+         aes(x = country, weight=suicides_no)) +
+    geom_bar() + 
+    theme(plot.title = element_text(hjust = 0.5), 
+          axis.text.x = element_text(angle = 90)) + 
+    ggtitle("Liczba samobójstw w latach 1979-2014")
+
+@
+
+
+
+<<bar4, echo=FALSE, out.width='4in', fig.align="center", warning=FALSE, fig.cap="Liczba samobójstw w 2014 roku jako procent społeczeństwa">>=
+ggplot(df[df$country %in% chosen_countries & df$year == 2014,], 
+         aes(x = country, weight=suicides_no/total_population)) +
+    geom_bar() + 
+    theme(plot.title = element_text(hjust = 0.5), 
+          axis.text.x = element_text(angle = 90)) + 
+    ggtitle("Liczba samobójstw w 2014 roku jako procent społeczeństwa")
+
+@
+
+
+
+
+
+<<bar5b, echo=FALSE, out.width='4in', fig.align="center", warning=FALSE, fig.cap="Procentowy udział kobiet i mężczyzn w łącznej liczbie samobójstw w latach 1979-2014">>=
+ggplot(df[df$country %in% chosen_countries & df$year %in% 1979:2014,], 
+         aes(x = country, fill=sex, weight=suicides_no)) +
+    geom_bar(position="fill") + 
+    theme(plot.title = element_text(hjust = 0.5), 
+          axis.text.x = element_text(angle = 90)) + 
+    ggtitle("Procentowy udział kobiet i mężczyzn w łącznej liczbie samobójstw \n w latach 1979-2014")
+
+@
+
+
+Jak widzimy na wykresie \ref{fig:bar5b} na stronie \pageref{fig:bar5b}, problem samobójstw w latach 1979-2013 dotyczy głównie mężczyzn, bez względu na rozpatrywany kraj. 
+
+
+Okazuje się, że na przestrzeni lat tendencja przewagi liczby mężczyzn wśród samobójstw pogłębia się (wykres \ref{fig:hist3} na stronie \pageref{fig:hist3}) - stanowią coraz większy procent wśród samobójców rozpatrywanych krajów Europy Zachodniej. 
+
+<<hist3, echo=FALSE, out.width='4in', fig.align="center", warning=FALSE, fig.cap="Stosunek liczby kobiet do liczby mężczyżn popełniających samobójstwa">>=
+ggplot(df[df$country %in% chosen_countries & df$year %in% 1979:2014,], aes(x = year, fill=sex, weight=suicides_no)) +
+  geom_bar(position = "fill") +
+  ggtitle("Stosunek liczby kobiet do liczby mężczyzn popełniających samobójstwa") +
+  theme(legend.position = "none")
+
+@
+
+
+
+
+
+
+
+
+
+
+
+
+
+\chapter{Podsumowanie}
+Analiza całościowa danych po obsłudze braków danych oraz analiza grupy krajów reprezentatywnych (pod względem zachowanej ciągłości danych) pozwoliła na wyciągnięcie następująych wniosków:
+
+\begin{itemize}
+  \item znacząco więcej samobójców jest mężczyznami,
+  \item tendencja do przewagi mężczyzn nie zależy znacząco od kontynentu ani grupy wiekowej,
+  \item we wszystkich przeanalizowanych krajach przewaga mężczyzn nad kobietami wśród samobójców zostaje zachowana,
+  \item w rozważanych państwach Europy Zachodniej udział procentowy mężczyzn w samobójstwach nieznacznie rośnie na przestrzeni lat.
+\end{itemize}
+
+Nawiązując do pytania badawczego, mężczyźni częściej popełniają samobójstwa, a tendencja ta nie zależy znacząco od pozostałych analizowanych zmiennych.
+
+ 
+
+\end{document}

@@ -1,0 +1,45 @@
+\documentclass[12pt]{mwrep}
+\usepackage[utf8]{inputenc}
+\usepackage{polski}
+\usepackage{lmodern}
+\usepackage{wasysym}
+\usepackage[hidelinks]{hyperref}
+\usepackage{array}
+\newcolumntype{P}[1]{>{\centering\arraybackslash}p{#1}}
+\newcolumntype{M}[1]{>{\centering\arraybackslash}m{#1}}
+\author{Joanna Matuszak 255762, Joanna Wojciechowicz 255747}
+\title{Sprawozdanie 1}
+\date{\today}
+\begin{Schunk}
+\begin{Sinput}
+> pdf.options(encoding='CP1250')
+> library(xtable)
+\end{Sinput}
+\end{Schunk}
+
+\usepackage{Sweave}
+\begin{document}
+\input{sprawozdanie-concordance}
+\maketitle
+\tableofcontents
+\chapter{Wstęp}
+
+Analizowane dane dotyczą ilości samobójstw w zależności od roku, płci i wieku w wybranych państwach świata. Zbiór danych pochodzi ze strony \href{https://www.kaggle.com/}{Kaggle} \url{https://www.kaggle.com/szamil/who-suicide-statistics} i został zebrany przez Światową Organizację Zdrowia WHO. 
+
+Celem analizy będzie odpowiedź na pytanie „Kto częściej popełnia samobójstwa – kobiety czy mężczyźni?". Przeprowadzimy analizę w zależności od kraju i grupy wiekowej. Na początku skupimy się na analizie całościowej - weźmiemy pod uwagę cały zbiór danych, a następnie na reprezentatywnej grupie państw Europy Zachodniej.
+
+Aby to zrobić dokonamy wstępnej obróbki danych, w której przeanalizujemy braki danych oraz błędne wartości w zbiorze. Następnie, wykorzystując różnego rodzaju wykresy, takie jak wykres słupkowy oraz wykres liniowy, wyciągniemy wnioski, które pozwolą odpowiedzieć na postawione pytanie badawcze.
+
+
+\chapter{Wstępna obróbka danych}
+
+\begin{Schunk}
+\begin{Sinput}
+> library(dplyr)
+> library(ggplot2)
+> df <- read.csv("who_suicide_statistics.csv", stringsAsFactors = TRUE)
+\end{Sinput}
+\end{Schunk}
+
+Zbiór danych, którego kilka początkowych wierszy zostało przedstawionych w Tabeli \ref{tab:tabelka1}, zawiera zarówno zmienne kategoryczne jak i numeryczne.
+
