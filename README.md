@@ -9,6 +9,11 @@ Celem analizy będzie odpowiedź na pytanie „Kto częściej popełnia samobój
 Aby to zrobić dokonamy wstępnej obróbki danych, w której przeanalizujemy braki danych oraz błędne wartości w zbiorze. Następnie, wykorzystując różnego rodzaju wykresy, takie jak wykres słupkowy oraz wykres liniowy,
 wyciągniemy wnioski, które pozwolą odpowiedzieć na postawione pytanie badawcze.
 
+Projekt składa się z:
+- pliku Rnw z całkowitym raportem (knitr, R),
+- wersji pdf raportu,
+- pliku csv z danymi.
+
 ## Autorzy
 - [Joanna Matuszak](https://github.com/vsiv00)
 - Joanna Wojciechowicz
